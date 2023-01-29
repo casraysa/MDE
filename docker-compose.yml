@@ -1,11 +1,11 @@
 services:
   image-api:
     build: .
-    image: image-api:1.0.0
+    image: image_api:1.0.0
     ports:
       - "8080:8080"
     volumes:
-      - image_data:/images
+      - image_data:/image_api/images
 
   db:
     image: mysql:8.0
