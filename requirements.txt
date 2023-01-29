@@ -1,6 +1,0 @@
-Flask==2.2.2
-sqlalchemy < 2.0
-waitress==2.1.2
-pymysql==1.0.2
-imagekitio==3.0.1
-cryptography==39.0.0
