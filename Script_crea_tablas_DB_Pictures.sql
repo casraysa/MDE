@@ -2,7 +2,6 @@ CREATE TABLE pictures (
     id int NOT NULL AUTO_INCREMENT,
     path TEXT NOT NULL,
     date varchar(25) NOT NULL,
-    size float,
     PRIMARY KEY (id)
 );
 
