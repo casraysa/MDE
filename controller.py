@@ -1,10 +1,12 @@
 from . import models
 from imagekitio import ImageKit
+import base64
 import json
+import os
 import requests as r
 from uuid import uuid4
 
-with open("credentials.json") as f:
+with open("image_api/credentials.json") as f:
     creds = json.load(f)
 
 imagekit = ImageKit(
@@ -18,7 +20,7 @@ api_secret = creds['imaggacreds']['api_secret']
 
 def get_tags(b64str, min_confidence):
     
-    photo_name = str(uuid4())
+    photo_name = str(uuid4()) + '.jpg'
     # Generamos la URL para luego llamar a la API de imagekitio
     upload_info = imagekit.upload(file = b64str, file_name = photo_name)
     
@@ -34,9 +36,9 @@ def get_tags(b64str, min_confidence):
     imagekit.delete_file(file_id = upload_info.file_id)
     
     # Guardamos la imagen en una carpeta determinada
-    file_name = "images/" + photo_name
-    with open(file_name, 'w') as f:
-        f.write(b64str)
+    file_name = "image_api/images/" + photo_name
+    with open(file_name, 'wb') as f:
+        f.write(base64.decodebytes(b64str.encode('utf-8')))
     
     # Guardamos en BBDD y devolvemos respuesta
     return models.tags(file_name, tags)

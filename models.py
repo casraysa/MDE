@@ -13,52 +13,69 @@ def get_size(path):
     return size
 
 def get_data(path):
-    with open(path, "r") as f:
-        binary_image = base64.b64decode(f)      
-    return binary_image
+    with open(path, "rb") as f:
+        binary_string = base64.b64encode(f.read()).decode('utf-8')      
+    return binary_string
 
-with open("credentials.json") as f:
+with open("image_api/credentials.json") as f:
     creds = json.load(f)
 
 user, pwd = creds['mysql']['user'], creds['mysql']['pwd']
-engine = create_engine(f"mysql+pymysql:/{user}:{pwd}@localhost/Pictures")
+engine = create_engine(f"mysql+pymysql://{user}:{pwd}@db/Pictures")
   
    
 def tags(path, tags):
     with engine.connect() as con:
-        result = con.execute(f"""INSERT INTO pictures (path, date)
+        con.execute(f"""INSERT INTO pictures (path, date)
             VALUES ('{path}','{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
             """)
     
     with engine.connect() as con:
-        det = con.execute(f"SELECT id, date FROM pictures WHERE path = '{path}'")
+        det = con.execute(f"""SELECT id, date 
+                            FROM pictures WHERE path = '{path}'""").fetchall()
+    
+    id, date = det[0][0], det[0][1]
     
     data = [
         (
             t['tag'],
-            i['id'],
             t['conf'],
-            i['date'],
         )
-        for i in det
         for t in tags
     ]
     
     with engine.connect() as con:
-        for (tag, id, conf, date) in data:
+        for (tag, conf) in data:
             con.execute(f"INSERT INTO tags VALUES('{tag}',{id},{conf},'{date}')")
     
     return {
-        "id": det['id'],
+        "id": id,
         "size": get_size(path),
-        "date": det['date'],
+        "date": date,
         "tags": tags
     }
 
 
+def get_image(id):
+    with engine.connect() as con:
+        data = con.execute(f"""SELECT P.id, P.date, T.tag, T.confidence
+                                FROM pictures AS P 
+                                INNER JOIN tags AS T ON P.id = T.picture_id
+                                WHERE id = {id}""").fetchall()
+        
+    with engine.connect() as con:
+        path = con.execute(f"SELECT path FROM pictures WHERE id = {id}").fetchall()
+    
+    result = [dict((key, value) for key, value in row.items()) for row in data]
+    
+    result.append({'size': get_size(path[0][0])})
+    result.append({'data': get_data(path[0][0])})
+    
+    return result
+
+
 def get_images(min_date, max_date, tags):
-    sql_select = """SELECT P.id, p.size, P.date, T.tag,
-                        T.condifence
+    sql_select = """SELECT P.id, P.date, T.tag, T.confidence
                     FROM pictures AS P 
                     INNER JOIN tags AS T ON P.id = T.picture_id """
     
@@ -78,30 +95,14 @@ def get_images(min_date, max_date, tags):
         sql_where = f"WHERE T.tag IN ({tags})"""
 
     with engine.connect() as con:
-        result = con.execute(sql_select + sql_where)
+        data = con.execute(sql_select + sql_where).fetchall()
     
-    return result
-
-
-def get_image(id):
-    with engine.connect() as con:
-        result = con.execute(f"""SELECT P.id, p.size, P.date, T.tag,
-                                    T.condifence
-                                FROM pictures AS P 
-                                INNER JOIN tags AS T ON P.id = T.picture_id
-                                WHERE id = '{id}'""")
-        
-    with engine.connect() as con:
-        path = con.execute(f"SELECT path FROM pictures WHERE id = '{id}'")
-    
-    result += get_data(path)
-    
-    return result
+    return [dict((key, value) for key, value in row.items()) for row in data]
 
 
 def get_tags(min_date, max_date):   
     sql_select = """SELECT tag, 
-                        COUNT(DISTINCT id) as n_images,
+                        COUNT(DISTINCT picture_id) as n_images,
                         MIN(confidence) as min_confidence,
                         MAX(confidence) as max_confidence,
                         AVG(confidence) as mean_confidence
@@ -120,6 +121,6 @@ def get_tags(min_date, max_date):
         sql_where
         
     with engine.connect() as con:
-        result = con.execute(sql_select + sql_where + sql_groupby)
+        data = con.execute(sql_select + sql_where + sql_groupby).fetchall()
     
-    return result
+    return [dict((key, value) for key, value in row.items()) for row in data]

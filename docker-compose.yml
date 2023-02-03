@@ -1,5 +1,5 @@
 services:
-  image-api:
+  image_api:
     build: .
     image: image_api:1.0.0
     ports:

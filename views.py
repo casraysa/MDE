@@ -22,29 +22,37 @@ def process_pict():
 def images():
     min_date = request.args.get("min_date")
     max_date = request.args.get("max_date")
+    tags = request.args.get("tags")
     
-    d = controller.models.get_images(min_date, max_date)
+    if min_date is not None:
+        min_date.replace("%20", " ")
+        
+    if max_date is not None:
+        max_date.replace("%20", " ")
+        
+    if tags is not None:
+        tags = tags.replace("%20", " ")
+        tags = "'" + tags.replace(",", "','") + "'"
+    
+    d = controller.models.get_images(min_date, max_date, tags)
    
-    return jsonify(d)
+    return d
  
 @bp.get("/image/<id>")
 def image(id):
-        
-    if id is None:
-        return make_response({"description": "Debes especificar un id de photo en la llamada."}, 400)
-    
-    id = int(request.args.get("id"))
-    
-    d = controller.models.get_image(id)
-    
-    return jsonify(d)
+    return controller.models.get_image(id)
 
 @bp.get("/tags")
 def tags():
     min_date = request.args.get("min_date")
     max_date = request.args.get("max_date")
-    tags = request.args.get("tags")
     
-    d = controller.models.get_tags(min_date, max_date, tags)
+    if min_date is not None:
+        min_date.replace("%20", " ")
+        
+    if max_date is not None:
+        max_date.replace("%20", " ")
     
-    return jsonify(d)
+    d = controller.models.get_tags(min_date, max_date)
+    
+    return d
